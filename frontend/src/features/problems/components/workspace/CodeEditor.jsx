@@ -76,7 +76,7 @@ const CodeEditor = ({
           color="gray"
           leftSection={<IconPlayerPlay size={16} />}
           onClick={onRun}
-          loading={isSubmissionLoading}
+          disabled={isSubmissionLoading}
         >
           Run Code
         </Button>
@@ -85,6 +85,7 @@ const CodeEditor = ({
           leftSection={<IconCloudUpload size={16} />}
           onClick={onSubmit}
           loading={isSubmissionLoading}
+          disabled={isSubmissionLoading}
         >
           Submit
         </Button>

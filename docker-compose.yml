@@ -53,52 +53,25 @@ services:
       - ./backend:/app
       - /app/node_modules
       - backend_problems:/app/problems
+      - /var/run/docker.sock:/var/run/docker.sock
 
     environment:
       PORT: 5000
       MONGODB_URI: mongodb://mongodb:27017/online-judge
       STORAGE_BASE_PATH: /app/problems
       MINIO_ENDPOINT: http://minio:9000
-      JUDGE_SERVICE_URL: http://judge:5010
       CORS_ORIGIN: http://localhost:5173
+      REDIS_URL: redis://redis:6379
+      MAX_MEMORY: 256m
+      MAX_CPU: "0.5"
+      EXECUTION_TIMEOUT: 5
+
+    privileged: true
 
     depends_on:
       - mongodb 
       - minio
-
-    networks:
-      - oj-network
-
-    command: npm run dev
-
-  # Judge Service
-  judge:
-    build:
-      context: ./judge
-      dockerfile: Dockerfile
-    container_name: oj-judge
-    restart: unless-stopped
-
-    env_file:
-      - .env
-
-    ports:
-      - "5010:5010"
-
-    volumes:
-      - ./judge:/app
-      - ./judge/temp:/app/temp
-      - /app/node_modules
-      - /var/run/docker.sock:/var/run/docker.sock
-
-    environment:
-      PORT: 5010
-
-      MAX_MEMORY: 256m
-      MAX_CPU: 0.5
-      EXECUTION_TIMEOUT: 5
-
-    privileged: true
+      - redis
 
     networks:
       - oj-network
@@ -132,6 +105,15 @@ services:
       - oj-network
 
     command: npm run dev -- --host
+  
+  redis:
+    image: redis:7-alpine
+    container_name: oj-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - oj-network
 
 networks:
   oj-network:

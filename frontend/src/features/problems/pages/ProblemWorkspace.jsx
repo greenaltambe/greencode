@@ -156,8 +156,14 @@ const ProblemWorkspace = () => {
     }
   }, [submissionResult]);
 
+  const isSubmissionPending =
+    isSubmissionLoading ||
+    (submissionResult &&
+      (submissionResult.status === "queued" || submissionResult.status === "running"));
+
   // Handle run solution
   const handleRun = () => {
+    if (isSubmissionPending) return;
     setConsoleTab("run");
     setActiveTestCaseIndex(0);
     runSolution({ problemId: id, code, language });
@@ -165,10 +171,11 @@ const ProblemWorkspace = () => {
 
   // Handle submit solution
   const handleSubmit = () => {
+    if (isSubmissionPending) return;
     setConsoleTab("submit");
     setActiveSubmissionCaseIndex(0);
     submitSolution({ problemId: id, code, language }).then(() => {
-      getSubmissions(id); // Reload history
+      getSubmissions(id); // Reload history when done
     });
   };
 
@@ -297,7 +304,7 @@ const ProblemWorkspace = () => {
                     autocomplete={autocomplete}
                     onRun={handleRun}
                     onSubmit={handleSubmit}
-                    isSubmissionLoading={isSubmissionLoading}
+                    isSubmissionLoading={isSubmissionPending}
                   />
                 </Panel>
 
@@ -317,7 +324,7 @@ const ProblemWorkspace = () => {
                   <WorkspaceConsole
                     consoleTab={consoleTab}
                     onTabChange={setConsoleTab}
-                    isSubmissionLoading={isSubmissionLoading}
+                    isSubmissionLoading={isSubmissionPending}
                     runResult={runResult}
                     activeTestCaseIndex={activeTestCaseIndex}
                     setActiveTestCaseIndex={setActiveTestCaseIndex}

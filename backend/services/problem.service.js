@@ -171,6 +171,7 @@ export const createProblem = async ({ title, description, difficulty, testCases,
 
   const inputs = files?.inputs || [];
   const outputs = files?.outputs || [];
+  const checkerFiles = files?.checker || [];
 
   // Validate that there is at least one input and output file, and that they match in number
   if (inputs.length === 0 || outputs.length === 0) {
@@ -186,6 +187,34 @@ export const createProblem = async ({ title, description, difficulty, testCases,
     throw new AppError("Mismatched number of test pairs", 400);
   }
 
+  // Validate checker file if provided
+  let checkerMeta = {
+    enabled: false,
+    language: "python",
+    filename: "checker.py",
+  };
+
+  if (checkerFiles.length > 0) {
+    const checkerFile = checkerFiles[0];
+    if (checkerFiles.length > 1) {
+      throw new AppError("Only one custom checker file can be uploaded", 400);
+    }
+    if (checkerFile.originalname !== "checker.py") {
+      throw new AppError("Checker file must be named strictly 'checker.py'", 400);
+    }
+    if (!checkerFile.originalname.endsWith(".py")) {
+      throw new AppError("Checker file must be a Python script (.py)", 400);
+    }
+    if (checkerFile.buffer.length > 5 * 1024 * 1024) {
+      throw new AppError("Checker file exceeds the maximum allowed size (5MB)", 400);
+    }
+    checkerMeta = {
+      enabled: true,
+      language: "python",
+      filename: "checker.py",
+    };
+  }
+
   console.log(`New problem added: ${title} [${difficulty}]`);
 
   const problem = await Problem.create({
@@ -194,12 +223,18 @@ export const createProblem = async ({ title, description, difficulty, testCases,
     difficulty,
     testCases: parsedTestCases,
     tags: parsedTags,
+    checker: checkerMeta,
   });
 
   for (const pair of testPairs) {
     console.log(pair);
     await storage.uploadTestCase(problem._id, pair.input, pair.output, pair.id);
     console.log("Uploaded testcase", pair.id);
+  }
+
+  if (checkerFiles.length > 0) {
+    await storage.uploadChecker(problem._id, checkerFiles[0]);
+    console.log("Uploaded checker file");
   }
 
   console.log(problem);
@@ -211,6 +246,60 @@ export const updateProblem = async (id, updateData) => {
 
   if (!problem) {
     throw new AppError("Problem not found", 400);
+  }
+
+  const files = updateData.files;
+  delete updateData.files;
+
+  // Handle checker removal if flag passed
+  if (updateData.removeChecker === true || updateData.removeChecker === "true") {
+    try {
+      await storage.deleteChecker(id);
+    } catch (e) {
+      console.error(`Failed to delete checker for problem ${id}:`, e.message);
+    }
+    updateData.checker = {
+      enabled: false,
+      language: "python",
+      filename: "checker.py",
+    };
+    delete updateData.removeChecker;
+  }
+
+  // Handle new custom checker upload if uploaded
+  const checkerFiles = files?.checker || [];
+  if (checkerFiles.length > 0) {
+    const checkerFile = checkerFiles[0];
+    if (checkerFiles.length > 1) {
+      throw new AppError("Only one custom checker file can be uploaded", 400);
+    }
+    if (checkerFile.originalname !== "checker.py") {
+      throw new AppError("Checker file must be named strictly 'checker.py'", 400);
+    }
+    if (!checkerFile.originalname.endsWith(".py")) {
+      throw new AppError("Checker file must be a Python script (.py)", 400);
+    }
+    if (checkerFile.buffer.length > 5 * 1024 * 1024) {
+      throw new AppError("Checker file exceeds the maximum allowed size (5MB)", 400);
+    }
+
+    await storage.uploadChecker(id, checkerFile);
+    updateData.checker = {
+      enabled: true,
+      language: "python",
+      filename: "checker.py",
+    };
+  }
+
+  // Parse and validate testCases if provided as string
+  if (updateData.testCases) {
+    try {
+      updateData.testCases = typeof updateData.testCases === "string" 
+        ? JSON.parse(updateData.testCases) 
+        : updateData.testCases;
+    } catch (error) {
+      throw new AppError("Invalid test cases format", 400);
+    }
   }
 
   // Parse and validate tags if provided

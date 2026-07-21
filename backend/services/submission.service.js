@@ -1,8 +1,11 @@
 import Problem from "../models/problem.model.js";
 import Submission from "../models/submission.model.js";
-import storage from "../config/storage.js";
-import axios from "axios";
 import { AppError } from "../utils/errors.js";
+import { executeCode } from "../executor/executeCode.js";
+import { enqueueSubmission } from "../jobs/producers/submission.producer.js";
+import { evaluateExecutionResult } from "../executor/evaluateExecutionResult.js";
+import { runChecker } from "../executor/runChecker.js";
+import storage from "../config/storage.js";
 
 export const runSolution = async ({ problemId, code, language }) => {
   if (!problemId || !code || !language) {
@@ -10,7 +13,6 @@ export const runSolution = async ({ problemId, code, language }) => {
   }
 
   const problem = await Problem.findById(problemId);
-  console.log(problem);
 
   if (!problem) {
     throw new AppError("Problem not found while submitting solution", 400);
@@ -23,42 +25,34 @@ export const runSolution = async ({ problemId, code, language }) => {
     const input = testCase.input;
     const expectedOutput = testCase.expectedOutput;
 
-    const response_data = await axios.post(
-      process.env.JUDGE_SERVICE_URL + `/run`,
-      {
-        code,
-        language,
+    // Directly execute the code
+    const result = await executeCode({
+      code,
+      language,
+      input,
+    });
+
+    let passedOverride = undefined;
+    const isExecutionSuccessful = result.status === "success";
+
+    if (problem.checker && problem.checker.enabled && isExecutionSuccessful) {
+      const checkerCode = await storage.getChecker(problem._id.toString());
+      const checkerResult = await runChecker({
+        checkerCode,
         input,
-      },
-      {
-        headers: {
-          "x-judge-service-secret": process.env.JUDGE_SERVICE_SECRET,
-        },
-      }
-    );
-
-    const result = response_data.data;
-    let actualOutput = "";
-    let passed = false;
-
-    if (result.status === "compile_error") {
-      actualOutput = result.compileOutput || "Compile Error";
-    } else if (result.status === "time_limit_exceeded") {
-      actualOutput = "Time Limit Exceeded";
-    } else if (result.status === "memory_limit_exceeded") {
-      actualOutput = "Memory Limit Exceeded";
-    } else if (result.status === "runtime_error") {
-      actualOutput = result.stderr || "Runtime Error";
-    } else {
-      actualOutput = result.stdout || "";
-      passed = actualOutput.trim() === expectedOutput.trim();
+        expectedOutput,
+        actualOutput: result.stdout || "",
+      });
+      passedOverride = checkerResult.passed;
     }
+
+    const evaluated = evaluateExecutionResult(result, expectedOutput, passedOverride);
 
     response.push({
       input,
-      output: actualOutput,
+      output: evaluated.actualOutput,
       expectedOutput,
-      passed,
+      passed: evaluated.passed,
     });
   }
 
@@ -76,127 +70,37 @@ export const submitSolution = async ({ userId, problemId, code, language }) => {
     throw new AppError("Problem not found while submitting solution", 400);
   }
 
-  const testCases = await storage.listTestCases(problemId);
-  const results = [];
-  let allPassed = true;
-  let finalStatus = "accepted";
-  let maxTime = 0;
-  let maxMemory = 0;
-  let finalExitCode = 0;
-  let finalCompileOutput = "";
-  let finalStderr = "";
-
-  for (const tc of testCases) {
-    const inputContent = await storage.getInputContent(problemId, tc.input);
-    const expectedOutputContent = await storage.getOutputContent(
-      problemId,
-      tc.output,
-    );
-
-    try {
-      const response_data = await axios.post(
-        process.env.JUDGE_SERVICE_URL + `/run`,
-        {
-          code,
-          language,
-          input: inputContent,
-        },
-        {
-          headers: {
-            "x-judge-service-secret": process.env.JUDGE_SERVICE_SECRET,
-          },
-        }
-      );
-
-      const result = response_data.data;
-      if (!result || typeof result.status !== "string") {
-        console.error("Unexpected response from code runner:", result);
-        throw new AppError("Code runner did not return valid output.", 500);
-      }
-
-      if (typeof result.executionTime === "number" && result.executionTime > maxTime) {
-        maxTime = result.executionTime;
-      }
-      if (typeof result.memoryUsage === "number" && result.memoryUsage > maxMemory) {
-        maxMemory = result.memoryUsage;
-      }
-
-      let actualOutput = "";
-      let passed = false;
-
-      if (result.status === "compile_error") {
-        actualOutput = result.compileOutput || "Compile Error";
-        finalStatus = "compile_error";
-        finalExitCode = typeof result.exitCode === "number" ? result.exitCode : 111;
-        finalCompileOutput = result.compileOutput || "";
-      } else if (result.status === "time_limit_exceeded") {
-        actualOutput = "Time Limit Exceeded";
-        finalStatus = "time_limit_exceeded";
-        finalExitCode = typeof result.exitCode === "number" ? result.exitCode : 124;
-        finalStderr = result.stderr || "Time Limit Exceeded";
-      } else if (result.status === "memory_limit_exceeded") {
-        actualOutput = "Memory Limit Exceeded";
-        finalStatus = "memory_limit_exceeded";
-        finalExitCode = typeof result.exitCode === "number" ? result.exitCode : 137;
-        finalStderr = result.stderr || "Memory Limit Exceeded";
-      } else if (result.status === "runtime_error") {
-        actualOutput = result.stderr || "Runtime Error";
-        finalStatus = "runtime_error";
-        finalExitCode = typeof result.exitCode === "number" ? result.exitCode : 0;
-        finalStderr = result.stderr || "";
-      } else {
-        actualOutput = result.stdout || "";
-        passed = actualOutput.trim() === expectedOutputContent.trim();
-        if (!passed) {
-          finalStatus = "wrong_answer";
-          finalExitCode = typeof result.exitCode === "number" ? result.exitCode : 0;
-          finalStderr = result.stderr || "";
-        }
-      }
-
-      results.push({
-        input: inputContent,
-        output: actualOutput,
-        expectedOutput: expectedOutputContent.trim(),
-        passed,
-      });
-
-      if (!passed || finalStatus !== "accepted") {
-        allPassed = false;
-        break;
-      }
-    } catch (error) {
-      console.error(
-        `Error running solution for problem ${problemId}:`,
-        error.message,
-      );
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError("An error occurred while running your solution.", 500);
-    }
-  }
-
+  // Create Submission(status="queued")
   const submission = await Submission.create({
     user: userId,
     problem: problemId,
     code: code,
     language: language,
-    status: finalStatus,
-    executionTime: maxTime,
-    memoryUsage: maxMemory,
-    exitCode: finalExitCode,
-    compileOutput: finalCompileOutput,
-    stderr: finalStderr,
+    status: "queued",
+    queuedAt: new Date(),
   });
 
-  return {
-    status: finalStatus,
-    results,
+  // Enqueue submissionId
+  await enqueueSubmission({
     submissionId: submission._id,
-    executionTime: maxTime,
-    memoryUsage: maxMemory,
+  });
+
+  // Immediately return queued status details
+  return {
+    status: "queued",
+    submissionId: submission._id,
   };
+};
+
+export const getSubmissionById = async (submissionId) => {
+  if (!submissionId) {
+    throw new AppError("Submission ID is required", 400);
+  }
+  const submission = await Submission.findById(submissionId);
+  if (!submission) {
+    throw new AppError("Submission not found", 404);
+  }
+  return submission;
 };
 
 export const getSubmissions = async (problemId) => {

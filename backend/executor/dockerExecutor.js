@@ -9,7 +9,7 @@ const execPromise = util.promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const TEMP_DIR = path.join(__dirname, "../temp");
+const TEMP_DIR = path.join(__dirname, "temp");
 
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -30,7 +30,7 @@ export async function runInDocker({ code, input, ext, command }) {
   const codeFile = path.join(TEMP_DIR, `Main_${jobId}.${ext}`);
   const inputFile = path.join(TEMP_DIR, `input_${jobId}.txt`);
 
-  // Write temporary files inside the judge container
+  // Write temporary files inside the backend container
   fs.writeFileSync(codeFile, code);
   fs.writeFileSync(inputFile, input);
 

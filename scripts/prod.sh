@@ -8,7 +8,7 @@ if [ ! -f .env.production ]; then
 fi
 
 echo "Building judge executor image..."
-docker build -f judge/Dockerfile.executor -t oj-executor judge/
+docker build -f backend/executor/Dockerfile.executor -t oj-executor backend/executor/
 
 docker compose -f docker-compose.prod.yml up --build -d
 

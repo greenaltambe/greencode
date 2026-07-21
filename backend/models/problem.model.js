@@ -33,6 +33,20 @@ const problemSchema = mongoose.Schema(
       enum: PROBLEM_TAG_IDS,
       default: [],
     },
+    checker: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      language: {
+        type: String,
+        default: "python",
+      },
+      filename: {
+        type: String,
+        default: "checker.py",
+      },
+    },
   },
   {
     timestamps: true,

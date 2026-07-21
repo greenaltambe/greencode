@@ -44,6 +44,9 @@ const ProblemFormStepper = ({ mode = "create" }) => {
   const [inputsFiles, setInputsFiles] = useState([]);
   const [outputsFiles, setOutputsFiles] = useState([]);
   const [tags, setTags] = useState([]);
+  const [checkerFile, setCheckerFile] = useState(null);
+  const [existingChecker, setExistingChecker] = useState(null);
+  const [removeChecker, setRemoveChecker] = useState(false);
 
   // Import states
   const [creationMethod, setCreationMethod] = useState("manual");
@@ -58,6 +61,9 @@ const ProblemFormStepper = ({ mode = "create" }) => {
     }
     return () => {
       reset();
+      setCheckerFile(null);
+      setExistingChecker(null);
+      setRemoveChecker(false);
     };
   }, [mode, id, getProblemById, reset]);
 
@@ -72,12 +78,14 @@ const ProblemFormStepper = ({ mode = "create" }) => {
         setTestCases(prob.testCases);
       }
       setTags(prob.tags || []);
+      setExistingChecker(prob.checker || null);
+      setRemoveChecker(false);
     }
   }, [mode, currentProblem]);
 
   // Handle operation success/error notifications
   useEffect(() => {
-    if (isSuccess && activeStep === (mode === "create" ? 5 : 4)) {
+    if (isSuccess && activeStep === 5) {
       notifications.show({
         title: mode === "create" ? "Problem Created" : "Problem Updated",
         message: `Successfully saved "${title}"!`,
@@ -96,6 +104,38 @@ const ProblemFormStepper = ({ mode = "create" }) => {
       reset();
     }
   }, [isSuccess, isError, message, reset, navigate, mode, title, activeStep]);
+
+  const handleDropChecker = (files) => {
+    const file = files[0];
+    if (!file) return;
+    if (file.name !== "checker.py") {
+      notifications.show({
+        title: "Invalid file name",
+        message: "Checker file must be named strictly 'checker.py'.",
+        color: "orange",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      notifications.show({
+        title: "File too large",
+        message: "Checker file exceeds the maximum allowed size (5MB).",
+        color: "orange",
+      });
+      return;
+    }
+    setCheckerFile(file);
+    setRemoveChecker(false);
+  };
+
+  const handleRemoveChecker = () => {
+    setCheckerFile(null);
+  };
+
+  const handleToggleRemoveExistingChecker = () => {
+    setRemoveChecker((prev) => !prev);
+    setCheckerFile(null);
+  };
 
   const handleAddExample = () => {
     setTestCases([...testCases, { input: "", expectedOutput: "" }]);
@@ -188,17 +228,26 @@ const ProblemFormStepper = ({ mode = "create" }) => {
       formData.append("tags", JSON.stringify(tags));
       inputsFiles.forEach((f) => formData.append("inputs", f));
       outputsFiles.forEach((f) => formData.append("outputs", f));
+      if (checkerFile) {
+        formData.append("checker", checkerFile);
+      }
 
       createProblem(formData);
     } else {
-      const payload = {
-        title,
-        description,
-        difficulty,
-        testCases,
-        tags,
-      };
-      updateProblem(id, payload);
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("difficulty", difficulty);
+      formData.append("testCases", JSON.stringify(testCases));
+      formData.append("tags", JSON.stringify(tags));
+      if (checkerFile) {
+        formData.append("checker", checkerFile);
+      }
+      if (removeChecker) {
+        formData.append("removeChecker", "true");
+      }
+
+      updateProblem(id, formData);
     }
   };
 
@@ -333,11 +382,15 @@ const ProblemFormStepper = ({ mode = "create" }) => {
                       <Text size="xs" style={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
                         problem.zip{"\n"}
                         ├── problem.json      # Metadata (title, description, difficulty, tags){"\n"}
+                        ├── checker.py        # Optional custom Python checker{"\n"}
                         └── tests/            # Tests directory{"\n"}
                             ├── input_1.txt   # Input testcase 1{"\n"}
                             ├── output_1.txt  # Output testcase 1{"\n"}
                             ├── input_2.txt{"\n"}
                             └── output_2.txt
+                      </Text>
+                      <Text size="xs" mt="sm">
+                        * Note: <strong>checker.py</strong> is optional. If omitted, GreenCode uses default output comparison.
                       </Text>
                     </Alert>
                   ) : (
@@ -346,12 +399,16 @@ const ProblemFormStepper = ({ mode = "create" }) => {
                         algorithms.zip{"\n"}
                         ├── two-sum/{"\n"}
                         │   ├── problem.json{"\n"}
+                        │   ├── checker.py    # Optional{"\n"}
                         │   └── tests/{"\n"}
                         │       ├── input_1.txt{"\n"}
                         │       └── output_1.txt{"\n"}
                         └── binary-search/{"\n"}
                             ├── problem.json{"\n"}
                             └── tests/
+                      </Text>
+                      <Text size="xs" mt="sm">
+                        * Note: <strong>checker.py</strong> is optional for every problem in the archive.
                       </Text>
                     </Alert>
                   )}
@@ -473,19 +530,24 @@ const ProblemFormStepper = ({ mode = "create" }) => {
                 />
               </Stepper.Step>
 
-              {/* Step 4: Submission Files (Only in Create Mode) */}
-              {mode === "create" ? (
-                <Stepper.Step label="Submission Files" description="Upload compilation cases">
-                  <UploadFilesStep
-                    inputsFiles={inputsFiles}
-                    outputsFiles={outputsFiles}
-                    onDropInputs={handleDropInputs}
-                    onDropOutputs={handleDropOutputs}
-                    onRemoveInputFile={handleRemoveInputFile}
-                    onRemoveOutputFile={handleRemoveOutputFile}
-                  />
-                </Stepper.Step>
-              ) : null}
+              {/* Step 4: Submission Files & Checker */}
+              <Stepper.Step label="Submission Files" description={mode === "create" ? "Upload compilation cases" : "Manage custom checker"}>
+                <UploadFilesStep
+                  inputsFiles={inputsFiles}
+                  outputsFiles={outputsFiles}
+                  onDropInputs={handleDropInputs}
+                  onDropOutputs={handleDropOutputs}
+                  onRemoveInputFile={handleRemoveInputFile}
+                  onRemoveOutputFile={handleRemoveOutputFile}
+                  checkerFile={checkerFile}
+                  onDropChecker={handleDropChecker}
+                  onRemoveChecker={handleRemoveChecker}
+                  existingChecker={existingChecker}
+                  removeChecker={removeChecker}
+                  onToggleRemoveExistingChecker={handleToggleRemoveExistingChecker}
+                  mode={mode}
+                />
+              </Stepper.Step>
 
               {/* Step 5 / 4: Preview */}
               <Stepper.Step label="Preview" description="Verify challenge rendering">

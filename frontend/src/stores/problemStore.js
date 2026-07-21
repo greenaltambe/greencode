@@ -78,7 +78,10 @@ export const useProblemStore = create((set) => ({
   updateProblem: async (id, problemData) => {
     set({ isLoading: true, isError: false, isSuccess: false, message: "" });
     try {
-      const response = await api.put(`/problems/${id}`, problemData);
+      const headers = problemData instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : {};
+      const response = await api.put(`/problems/${id}`, problemData, { headers });
       set((state) => ({
         problems: state.problems.map((prob) =>
           prob._id === id ? response.data.problem : prob

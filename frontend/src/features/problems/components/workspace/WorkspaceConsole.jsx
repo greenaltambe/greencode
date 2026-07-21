@@ -19,6 +19,9 @@ const getVerdictLabel = (status) => {
   if (status === "runtime_error") return "Runtime Error";
   if (status === "time_limit_exceeded") return "Time Limit Exceeded";
   if (status === "memory_limit_exceeded") return "Memory Limit Exceeded";
+  if (status === "internal_error") return "Internal Error";
+  if (status === "running") return "Running";
+  if (status === "queued") return "Queued";
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Rejected";
 };
 
@@ -251,7 +254,11 @@ const WorkspaceConsole = ({
                     overlayProps={{ blur: 0, color: "transparent" }}
                   />
                   <Text size="sm" c="dimmed" mt={40}>
-                    Submitting to Sandbox Judgement...
+                    {submissionResult && submissionResult.status === "queued"
+                      ? "Queued in queue, waiting for worker..."
+                      : submissionResult && submissionResult.status === "running"
+                      ? "Evaluating solution in Docker sandbox..."
+                      : "Submitting to Sandbox Judgement..."}
                   </Text>
                 </Stack>
               </Group>
@@ -280,7 +287,14 @@ const WorkspaceConsole = ({
                         color={
                           submissionResult.status === "accepted"
                             ? "teal"
+                            : submissionResult.status === "queued" || submissionResult.status === "running"
+                            ? "gray"
                             : "red"
+                        }
+                        variant={
+                          submissionResult.status === "queued" || submissionResult.status === "running"
+                            ? "outline"
+                            : "filled"
                         }
                         fullWidth
                         size="md"

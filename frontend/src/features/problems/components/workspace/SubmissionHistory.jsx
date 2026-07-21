@@ -8,6 +8,9 @@ const getVerdictLabel = (status) => {
   if (status === "runtime_error") return "Runtime Error";
   if (status === "time_limit_exceeded") return "Time Limit Exceeded";
   if (status === "memory_limit_exceeded") return "Memory Limit Exceeded";
+  if (status === "internal_error") return "Internal Error";
+  if (status === "running") return "Running";
+  if (status === "queued") return "Queued";
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Rejected";
 };
 
@@ -40,6 +43,10 @@ const SubmissionHistory = ({ submissions, onOpenSubmissionCode }) => {
                   {sub.status === "accepted" ? (
                     <Badge color="teal" leftSection={<IconCheck size={12} />}>
                       Accepted
+                    </Badge>
+                  ) : sub.status === "queued" || sub.status === "running" ? (
+                    <Badge color="gray" variant="outline">
+                      {getVerdictLabel(sub.status)}
                     </Badge>
                   ) : (
                     <Badge color="red" leftSection={<IconX size={12} />}>

@@ -98,6 +98,36 @@ class LocalStorage extends Storage {
       return false;
     }
   }
+
+  async uploadChecker(problemId, file) {
+    const problemPath = path.join(this.basePath, problemId.toString());
+    if (!fs.existsSync(problemPath)) {
+      fs.mkdirSync(problemPath, { recursive: true });
+    }
+    const checkerPath = path.join(problemPath, "checker.py");
+    fs.writeFileSync(checkerPath, file.buffer);
+    return { checkerPath };
+  }
+
+  async getChecker(problemId) {
+    const checkerPath = path.join(this.basePath, problemId.toString(), "checker.py");
+    if (!fs.existsSync(checkerPath)) {
+      throw new Error(`Checker file not found: ${checkerPath}`);
+    }
+    return fs.readFileSync(checkerPath, "utf-8");
+  }
+
+  async hasChecker(problemId) {
+    const checkerPath = path.join(this.basePath, problemId.toString(), "checker.py");
+    return fs.existsSync(checkerPath);
+  }
+
+  async deleteChecker(problemId) {
+    const checkerPath = path.join(this.basePath, problemId.toString(), "checker.py");
+    if (fs.existsSync(checkerPath)) {
+      fs.unlinkSync(checkerPath);
+    }
+  }
 }
 
 export default LocalStorage;

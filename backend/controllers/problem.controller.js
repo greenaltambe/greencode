@@ -38,7 +38,10 @@ export const setProblem = asyncHandler(async (req, res) => {
 // @route   PUT /api/problems/:id
 // @access  Private
 export const updateProblem = asyncHandler(async (req, res) => {
-  const result = await problemService.updateProblem(req.params.id, req.body);
+  const result = await problemService.updateProblem(req.params.id, {
+    ...req.body,
+    files: req.files,
+  });
   res.status(200).json(result);
 });
 
@@ -80,6 +83,14 @@ export const submitSolution = asyncHandler(async (req, res) => {
 // @access  Private
 export const getSubmissions = asyncHandler(async (req, res) => {
   const result = await submissionService.getSubmissions(req.params.id);
+  res.status(200).json(result);
+});
+
+// @desc    Get submission status/details by ID
+// @route   GET /api/problems/submissions/:submissionId
+// @access  Private
+export const getSubmissionStatus = asyncHandler(async (req, res) => {
+  const result = await submissionService.getSubmissionById(req.params.submissionId);
   res.status(200).json(result);
 });
 

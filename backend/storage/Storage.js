@@ -25,6 +25,23 @@ class Storage {
     async isHealthy() {
         throw new Error('Not implemented');
     }
+
+    // Checker operations
+    async uploadChecker(problemId, file) {
+        throw new Error('Not implemented');
+    }
+
+    async getChecker(problemId) {
+        throw new Error('Not implemented');
+    }
+
+    async hasChecker(problemId) {
+        throw new Error('Not implemented');
+    }
+
+    async deleteChecker(problemId) {
+        throw new Error('Not implemented');
+    }
 }
 
 export default Storage;

@@ -187,6 +187,18 @@ async function processProblemPackage(problemDir) {
     })),
   };
 
+  const checkerPath = path.join(problemDir, "checker.py");
+  if (fs.existsSync(checkerPath) && fs.statSync(checkerPath).isFile()) {
+    const checkerStats = fs.statSync(checkerPath);
+    if (checkerStats.size > 5 * 1024 * 1024) {
+      throw new AppError("checker.py file exceeds the maximum allowed size (5MB).", 400);
+    }
+    simulatedFiles.checker = [{
+      originalname: "checker.py",
+      buffer: fs.readFileSync(checkerPath),
+    }];
+  }
+
   // Invoke problemService.createProblem
   const result = await problemService.createProblem({
     title,

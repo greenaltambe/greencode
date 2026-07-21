@@ -44,6 +44,9 @@ const getVerdictLabel = (status) => {
   if (status === "runtime_error") return "Runtime Error";
   if (status === "time_limit_exceeded") return "Time Limit Exceeded";
   if (status === "memory_limit_exceeded") return "Memory Limit Exceeded";
+  if (status === "internal_error") return "Internal Error";
+  if (status === "running") return "Running";
+  if (status === "queued") return "Queued";
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Rejected";
 };
 
@@ -138,6 +141,10 @@ const RecentActivity = ({ activity }) => {
                     {isAccepted ? (
                       <Badge variant="filled" color="teal" size="xs">
                         Accepted
+                      </Badge>
+                    ) : sub.status === "queued" || sub.status === "running" ? (
+                      <Badge variant="outline" color="gray" size="xs">
+                        {getVerdictLabel(sub.status)}
                       </Badge>
                     ) : (
                       <Badge variant="filled" color="red" size="xs">

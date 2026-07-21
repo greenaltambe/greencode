@@ -4,6 +4,8 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
   DeleteObjectsCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import Storage from "./Storage.js";
 
@@ -110,6 +112,44 @@ class MinIOStorage extends Storage {
     } catch (error) {
       console.error("MinIO health check failed:", error);
       return false;
+    }
+  }
+
+  async uploadChecker(problemId, file) {
+    const key = `${problemId}/checker.py`;
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: file.buffer,
+      }),
+    );
+    return { key };
+  }
+
+  async getChecker(problemId) {
+    const key = `${problemId}/checker.py`;
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const response = await this.s3.send(command);
+    return await response.Body.transformToString("utf-8");
+  }
+
+  async hasChecker(problemId) {
+    const key = `${problemId}/checker.py`;
+    try {
+      await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async deleteChecker(problemId) {
+    const key = `${problemId}/checker.py`;
+    try {
+      await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch (error) {
+      // Ignore errors
     }
   }
 }

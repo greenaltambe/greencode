@@ -1,3 +1,4 @@
+import http from "http";
 import express from "express";
 import colors from "colors";
 import errorHandler from "./middleware/error.middleware.js";
@@ -11,6 +12,7 @@ import connectDB from "./config/db.js";
 import cors from "cors";
 import { validateEnv } from "./config/validateEnv.js";
 import storage from "./config/storage.js";
+import { initSocket } from "./config/socket.js";
 
 validateEnv();
 connectDB();
@@ -39,6 +41,12 @@ app.use("/api/notes", userNoteRouter);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+import "./jobs/workers/submission.worker.js";
+
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

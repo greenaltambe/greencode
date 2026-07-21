@@ -28,16 +28,17 @@ const submissionSchema = mongoose.Schema(
       type: String,
       required: true,
       enum: [
-        "pending",
+        "queued",
+        "running",
         "accepted",
-        "rejected",
         "wrong_answer",
         "compile_error",
         "runtime_error",
         "time_limit_exceeded",
         "memory_limit_exceeded",
+        "internal_error",
       ],
-      default: "pending",
+      default: "queued",
     },
 
     executionTime: {
@@ -64,6 +65,39 @@ const submissionSchema = mongoose.Schema(
       type: String,
       default: "",
     },
+
+    queuedAt: {
+      type: Date,
+    },
+
+    startedAt: {
+      type: Date,
+    },
+
+    completedAt: {
+      type: Date,
+    },
+
+    results: [
+      {
+        input: {
+          type: String,
+          default: "",
+        },
+        output: {
+          type: String,
+          default: "",
+        },
+        expectedOutput: {
+          type: String,
+          default: "",
+        },
+        passed: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

@@ -40,34 +40,16 @@ services:
     environment:
       MONGODB_URI: mongodb://mongodb:27017/online-judge
       MINIO_ENDPOINT: http://minio:9000
-      JUDGE_SERVICE_URL: http://judge:5010
 
     volumes:
       - backend_problems:/app/problems
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    privileged: true
 
     depends_on:
       - mongodb
       - minio
-
-    networks:
-      - oj-network
-
-  judge:
-    build:
-      context: ./judge
-
-    restart: always
-
-    env_file:
-      - .env.production
-
-    environment:
-      PORT: 5010
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
-    privileged: true
 
     networks:
       - oj-network
