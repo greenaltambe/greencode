@@ -31,6 +31,7 @@ import {
   IconBookmark,
   IconChartBar,
   IconMailCheck,
+  IconUsers,
 } from "@tabler/icons-react";
 
 const Layout = ({ children }) => {
@@ -111,7 +112,7 @@ const Layout = ({ children }) => {
         <Stack gap="md" style={{ flexGrow: 1 }}>
           {/* Logo & Theme Toggle Row */}
           <Group
-            justify="between"
+            justify="space-between"
             pb="md"
             style={{
               borderBottom: "1px solid var(--mantine-color-default-border)",
@@ -195,21 +196,37 @@ const Layout = ({ children }) => {
             </Button>
 
             {user && user?.role === "admin" && (
-              <Button
-                variant={
-                  location.pathname === "/problems/create" ? "light" : "subtle"
-                }
-                color="blue"
-                component={Link}
-                to="/problems/create"
-                onClick={close}
-                leftSection={<IconPlus size={16} />}
-                justify="start"
-                fullWidth
-                size="md"
-              >
-                Create Problem
-              </Button>
+              <>
+                <Button
+                  variant={
+                    location.pathname === "/problems/create" ? "light" : "subtle"
+                  }
+                  color="blue"
+                  component={Link}
+                  to="/problems/create"
+                  onClick={close}
+                  leftSection={<IconPlus size={16} />}
+                  justify="start"
+                  fullWidth
+                  size="md"
+                >
+                  Create Problem
+                </Button>
+
+                <Button
+                  variant={location.pathname === "/users" ? "light" : "subtle"}
+                  color="blue"
+                  component={Link}
+                  to="/users"
+                  onClick={close}
+                  leftSection={<IconUsers size={16} />}
+                  justify="start"
+                  fullWidth
+                  size="md"
+                >
+                  Users
+                </Button>
+              </>
             )}
           </Stack>
         </Stack>

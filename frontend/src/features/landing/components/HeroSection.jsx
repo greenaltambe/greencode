@@ -20,17 +20,6 @@ const HeroSection = () => {
   return (
     <Container size="xl" pt={{ base: 60, md: 100 }} pb={60}>
       <Stack align="center" gap="xl" style={{ textAlign: "center" }}>
-        <Badge
-          color="blue"
-          variant="light"
-          size="lg"
-          radius="xl"
-          py="md"
-          px="lg"
-        >
-          ✨ Introducing GreenCode v2
-        </Badge>
-
         <Title
           order={1}
           style={{

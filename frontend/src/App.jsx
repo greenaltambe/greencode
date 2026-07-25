@@ -12,6 +12,7 @@ import UserListsPage from "./features/userlist/pages/UserListsPage";
 import UserListDetailsPage from "./features/userlist/pages/UserListDetailsPage";
 import ReviewPage from "./features/userlist/pages/ReviewPage";
 import StatsPage from "./features/stats/pages/StatsPage";
+import UsersPage from "./features/admin/UsersPage";
 
 // Guard for authenticated users
 const ProtectedRoute = ({ children }) => {
@@ -78,6 +79,17 @@ function App() {
           <AdminRoute>
             <Layout>
               <ProblemFormStepper mode="edit" />
+            </Layout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <AdminRoute>
+            <Layout>
+              <UsersPage />
             </Layout>
           </AdminRoute>
         }

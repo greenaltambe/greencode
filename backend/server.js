@@ -9,13 +9,16 @@ import statsRouter from "./routes/stats.routes.js";
 import discussionRouter from "./routes/discussion.routes.js";
 import userNoteRouter from "./routes/userNote.routes.js";
 import connectDB from "./config/db.js";
+import adminRouter from "./routes/admin.routes.js";
 import cors from "cors";
 import { validateEnv } from "./config/validateEnv.js";
 import storage from "./config/storage.js";
 import { initSocket } from "./config/socket.js";
+import { bootstrapAdmin } from "./services/auth.service.js";
 
 validateEnv();
-connectDB();
+await connectDB();
+await bootstrapAdmin();
 
 // Check if storage is healthy before starting the server
 const healthy = await storage.isHealthy();
@@ -33,6 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/problems", problemsRouter);
 app.use("/api/userlists", userListsRouter);
 app.use("/api/stats", statsRouter);

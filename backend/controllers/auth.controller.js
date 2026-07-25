@@ -5,8 +5,8 @@ import * as authService from "../services/auth.service.js";
 // @route   POST /api/auth/register
 // @access  Public
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const result = await authService.registerUser({ name, email, password, role });
+  const { name, email, password } = req.body;
+  const result = await authService.registerUser({ name, email, password });
   res.status(201).json(result);
 });
 

@@ -33,7 +33,6 @@ const RegisterPage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
 
   useEffect(() => {
     if (user) {
@@ -73,7 +72,7 @@ const RegisterPage = () => {
       });
       return;
     }
-    register({ name, email, password, role });
+    register({ name, email, password });
   };
 
   return (
@@ -146,20 +145,7 @@ const RegisterPage = () => {
                     onChange={(e) => setPassword(e.target.value)}
                   />
 
-                  <Box>
-                    <Text size="sm" fw={500} mb={5}>
-                      I want to register as
-                    </Text>
-                    <SegmentedControl
-                      fullWidth
-                      value={role}
-                      onChange={setRole}
-                      data={[
-                        { label: "Coder", value: "user" },
-                        { label: "Administrator", value: "admin" },
-                      ]}
-                    />
-                  </Box>
+
 
                   <Button
                     type="submit"

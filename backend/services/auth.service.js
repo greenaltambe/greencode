@@ -11,7 +11,7 @@ const generateToken = (id) => {
   });
 };
 
-export const registerUser = async ({ name, email, password, role = "user" }) => {
+export const registerUser = async ({ name, email, password }) => {
   if (!name || !email || !password) {
     throw new AppError("Please add all fields", 400);
   }
@@ -42,7 +42,7 @@ export const registerUser = async ({ name, email, password, role = "user" }) => 
     name,
     email,
     password: hashedPassword,
-    role,
+    role: "user",
     isVerified: false,
     verificationToken: hashedVerificationToken,
     verificationTokenExpire,
@@ -179,4 +179,56 @@ export const resendVerificationEmail = async (email) => {
   return {
     message: "Verification email sent successfully",
   };
+};
+
+/**
+ * Seed initial admin user if none exist in the database
+ */
+export const bootstrapAdmin = async () => {
+  try {
+    // Check if at least one admin exists
+    const adminExists = await User.findOne({ role: "admin" });
+    if (adminExists) {
+      console.log("[Admin Bootstrap] Admin user already exists. Skipping bootstrap.");
+      return;
+    }
+
+    const email = process.env.INITIAL_ADMIN_EMAIL;
+    const password = process.env.INITIAL_ADMIN_PASSWORD;
+    const name = process.env.INITIAL_ADMIN_NAME;
+
+    if (!email || !password || !name) {
+      console.warn("[Admin Bootstrap Warning] INITIAL_ADMIN environment variables are not fully configured. Skipping bootstrap.");
+      return;
+    }
+
+    console.log(`[Admin Bootstrap] Seeding initial admin user: ${email}`);
+
+    // If a user already exists with the bootstrap email, promote them to admin
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      existingUser.role = "admin";
+      existingUser.isVerified = true;
+      await existingUser.save();
+      console.log(`[Admin Bootstrap] Promoted existing user ${email} to admin.`);
+      return;
+    }
+
+    // Hash password with bcryptjs
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create verified admin user
+    await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "admin",
+      isVerified: true,
+    });
+
+    console.log("[Admin Bootstrap] Initial admin user successfully bootstrapped!");
+  } catch (error) {
+    console.error("[Admin Bootstrap Error] Failed to bootstrap admin user:", error);
+  }
 };
