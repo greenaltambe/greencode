@@ -53,6 +53,11 @@ services:
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
+      STORAGE_TYPE: ${STORAGE_TYPE}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET}
     volumes:
       - backend_problems_prod:/app/problems
       - /var/run/docker.sock:/var/run/docker.sock
