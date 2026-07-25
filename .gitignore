@@ -40,9 +40,6 @@ judge/temp/
 .env.local
 .env.*.local
 
-# Docker volumes
-data/
-
 # Logs
 *.log
 logs/
