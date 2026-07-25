@@ -1,5 +1,5 @@
 import { Card, Select, Stack, TextInput, MultiSelect } from "@mantine/core";
-import { PROBLEM_TAGS, TAG_CATEGORIES } from "../../data/problemTags";
+import { PROBLEM_TAGS, TAG_CATEGORIES } from "../../data/problemTags.js";
 
 const BasicInfoStep = ({ title, setTitle, difficulty, setDifficulty, tags, setTags }) => {
   const selectData = TAG_CATEGORIES.map((category) => ({
