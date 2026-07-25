@@ -21,7 +21,7 @@ import CodeViewerDrawer from "../components/workspace/CodeViewerDrawer";
 import ReviewBanner from "../../userlist/components/ReviewBanner";
 
 // Static Data / Utils
-import { templates } from "../data/templates";
+import { templates } from "../data/templates.js";
 
 const ProblemWorkspace = () => {
   const { id } = useParams();
