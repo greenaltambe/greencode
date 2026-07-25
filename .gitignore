@@ -47,5 +47,6 @@ data/
 *.log
 logs/
 
-data-formater-scripts/
 **/temp_import/
+**/algorithms/
+**/datasets/

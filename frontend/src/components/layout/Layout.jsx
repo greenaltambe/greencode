@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AppShell,
   Group,
@@ -13,7 +14,9 @@ import {
   useMantineColorScheme,
   UnstyledButton,
   Container,
+  Alert,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
@@ -27,14 +30,16 @@ import {
   IconMoon,
   IconBookmark,
   IconChartBar,
+  IconMailCheck,
 } from "@tabler/icons-react";
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, logout, resendVerification } = useAuthStore();
   const [opened, { toggle, close }] = useDisclosure();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const [isResending, setIsResending] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -259,7 +264,7 @@ const Layout = ({ children }) => {
                     size="xs"
                     fw={600}
                     truncate
-                    style={{ color: "var(--mantine-color-text)" }}
+                    style={{ color: "var(--mantine-color-text)", display: "block", maxWidth: 190 }}
                   >
                     {displayEmail}
                   </Text>

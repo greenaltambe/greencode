@@ -1,24 +1,24 @@
-# Judge Service
+# Sandboxed Executor & Judging Engine
 
-The Judge Service is a sandboxed environment built to safely compile and run untrusted user submissions. It prevents malicious code execution, handles runtime environments, enforces constraints, and records execution metrics.
+The execution engine safely compiles and runs untrusted user submissions inside isolated Docker containers. It prevents malicious code execution, enforces runtime constraints, evaluates custom checkers, and measures execution metrics.
 
 ---
 
 ## Docker Execution & Sandboxing
 
-To run code safely, the Judge Service does not run user submissions on the host system. Instead, it spins up temporary, isolated Docker containers on demand.
+To run code safely, user submissions do not execute directly on the host system. Instead, temporary isolated Docker containers are provisioned dynamically for each execution.
 
-### Sandbox Isolation
-* **Network Isolation**: Containers are created with `--network=none` to prevent code from making network requests or interacting with internal infrastructure.
-* **CPU Constraints**: CPU usage is capped (configurable via `MAX_CPU` in `.env`, e.g., `0.5` cores) to prevent container locks or CPU exhaustion.
-* **Memory Constraints**: Memory limits are set (configurable via `MAX_MEMORY` in `.env`, e.g., `256m`). If code exceeds this limit, it is automatically terminated.
-* **Privilege Level**: The container runs with minimal system privileges.
+### Sandbox Constraints & Security
+* **Network Isolation**: Containers run with `--network=none` to prevent untrusted code from making network requests or interacting with internal services.
+* **CPU Limits**: CPU consumption is restricted (configurable via `MAX_CPU` in `.env`, default `0.5` cores).
+* **Memory Limits**: Memory usage is capped (configurable via `MAX_MEMORY` in `.env`, default `256m`). Out-of-memory processes are automatically killed by the kernel OOM killer.
+* **Timeout Protection**: Program execution is enforced via system timeout (`EXECUTION_TIMEOUT`, default `5` seconds).
 
 ---
 
 ## Supported Languages
 
-The Judge Service builds a dedicated base execution image (`oj-executor`) containing compilers and runtimes for the following languages:
+Dedicated execution environments support the following programming languages:
 
 | Language | Extension | Compiler / Interpreter | Command |
 | :--- | :--- | :--- | :--- |
@@ -28,34 +28,35 @@ The Judge Service builds a dedicated base execution image (`oj-executor`) contai
 
 ---
 
-## Execution Flow
+## Execution & Evaluation Flow
 
-For every code run request:
-1. **File Setup**: Code is written to a temporary file (`Main.<ext>`) and inputs to `input.txt` inside a local `temp/` folder.
-2. **Container Provisioning**: A container is created dynamically using the base executor image.
-3. **File Copying**: Source code and input files are copied into the container via `docker cp`.
-4. **Execution Run**: The Judge starts the container and runs the compiled binary or interpreter, passing `input.txt` via stdin. The command is prefixed with a timeout utility (`timeout 5s`).
-5. **Metric Capturing**: The execution process runs under the system utility `/usr/bin/time` to measure resource consumption.
-6. **Cleanup**: Once execution finishes (or terminates), the Judge retrieves the logs, reads the metrics file, deletes the Docker container, and cleans up the temporary files on the host filesystem.
-
----
-
-## Verdicts
-
-The Judge Service classifies low-level execution outcomes into the following verdicts based on process behavior:
-
-* **Compile Error**: The compiler (`g++`, `javac`, or Python compiler check) returned a non-zero exit code. Compiler diagnostics are captured and returned.
-* **Time Limit Exceeded**: The execution did not complete within the timeout threshold (`EXECUTION_TIMEOUT`), triggering a process termination.
-* **Memory Limit Exceeded**: The container was terminated by the Docker daemon due to exceeding the memory limit (detected via `OOMKilled` state).
-* **Runtime Error**: The program compiled but crashed during execution (exit code is non-zero).
-* **Success**: The program executed to completion within limits and exited with code `0`.
-
-> [!NOTE]
-> The backend compares the raw output of successful executions against the expected output to yield final user-facing statuses such as **Accepted** or **Wrong Answer**.
+For every submission or test run request:
+1. **Queue Dispatch**: Submission job is picked up by a BullMQ worker and status updates to `running` via Redis Pub/Sub.
+2. **File Setup**: Source code and test inputs are prepared in isolated temporary directories.
+3. **Container Creation**: A temporary Docker container is created with restricted privileges and memory limits.
+4. **Code Execution**: Source code is compiled (if compiled language) and executed, passing test inputs to `stdin`.
+5. **Checker Script Execution (Optional)**: If the problem has a custom Python checker enabled, the checker script runs against `input`, `expected_output`, and `actual_output`.
+6. **Metric Capturing**: Execution runtime (milliseconds) and maximum memory usage (bytes) are calculated.
+7. **Container Cleanup**: The temporary container is immediately stopped and removed.
 
 ---
 
-## Performance Metrics
+## Verdict Classifications
 
-* **Runtime**: Tracked in milliseconds using system execution time.
-* **Memory Usage**: Tracked in bytes by monitoring maximum resident set size during the run lifecycle.
+Low-level execution outcomes yield the following verdicts:
+
+* **Accepted**: The output matched the expected output (and passed custom checker if configured).
+* **Wrong Answer**: The program executed cleanly, but the output did not match expected test results.
+* **Compile Error**: Compilation (`g++`, `javac`, etc.) returned a non-zero exit code. Compiler diagnostics are recorded.
+* **Time Limit Exceeded**: Process execution timed out before completion.
+* **Memory Limit Exceeded**: Container was killed due to memory limit breach (`OOMKilled`).
+* **Runtime Error**: The program compiled but encountered a runtime crash (non-zero exit code).
+* **Internal Error**: System or docker execution exception occurred.
+
+---
+
+## Metrics & Real-Time Reporting
+
+- **Execution Time**: Measured in milliseconds (`ms`).
+- **Memory Usage**: Tracked in megabytes (`MB`) or bytes (`bytes`).
+- **WebSocket Streaming**: All verdict transitions (`queued` -> `running` -> final verdict) stream in real-time to connected client sockets.

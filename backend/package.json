@@ -26,6 +26,7 @@
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",
     "multer": "^2.0.2",
+    "nodemailer": "^6.9.13",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "uuid": "^11.1.0"

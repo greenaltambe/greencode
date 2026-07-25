@@ -25,3 +25,21 @@ export const login = asyncHandler(async (req, res) => {
 export const getUser = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
+
+// @desc    Verify email address
+// @route   GET /api/auth/verify-email
+// @access  Public
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const token = req.query.token || req.body.token;
+  const result = await authService.verifyEmailToken(token);
+  res.status(200).json(result);
+});
+
+// @desc    Resend verification email
+// @route   POST /api/auth/resend-verification
+// @access  Public
+export const resendVerification = asyncHandler(async (req, res) => {
+  const email = req.body.email || req.user?.email;
+  const result = await authService.resendVerificationEmail(email);
+  res.status(200).json(result);
+});

@@ -1,0 +1,111 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: oj-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: online-judge
+    networks:
+      - oj-dev-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: oj-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - oj-dev-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: oj-minio-dev
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_dev_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    networks:
+      - oj-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: oj-backend-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_problems_dev:/app/problems
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongodb:27017/online-judge
+      STORAGE_BASE_PATH: /app/problems
+      MINIO_ENDPOINT: http://minio:9000
+      CORS_ORIGIN: http://localhost:5173
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      FRONTEND_URL: ${FRONTEND_URL}
+      MAX_MEMORY: 256m
+      MAX_CPU: "0.5"
+      EXECUTION_TIMEOUT: 5
+    privileged: true
+    depends_on:
+      - mongodb
+      - minio
+      - redis
+    networks:
+      - oj-dev-network
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: oj-frontend-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - oj-dev-network
+    command: npm run dev -- --host
+
+networks:
+  oj-dev-network:
+    driver: bridge
+
+volumes:
+  mongodb_dev_data:
+  minio_dev_data:
+  backend_problems_dev:

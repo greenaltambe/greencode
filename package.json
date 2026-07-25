@@ -1,6 +1,21 @@
 {
+  "name": "online-judge",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "./scripts/start-dev.sh",
+    "dev:down": "./scripts/stop-dev.sh",
+    "prod": "./scripts/start-prod.sh",
+    "prod:down": "./scripts/stop-prod.sh",
+    "docker:dev": "./scripts/start-dev.sh",
+    "docker:dev:down": "./scripts/stop-dev.sh",
+    "docker:prod": "./scripts/start-prod.sh",
+    "docker:prod:down": "./scripts/stop-prod.sh"
+  },
   "dependencies": {
     "axios": "^1.18.1",
+    "mongoose": "^9.8.0",
+    "nodemailer": "^9.0.3",
     "puppeteer-core": "^25.3.0",
     "socket.io-client": "^4.8.3"
   }

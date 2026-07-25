@@ -4,6 +4,7 @@ import Layout from "./components/layout/Layout";
 import LandingPage from "./features/landing/LandingPage";
 import LoginPage from "./features/auth/LoginPage";
 import RegisterPage from "./features/auth/RegisterPage";
+import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import ProblemsPage from "./features/problems/pages/ProblemsPage";
 import ProblemWorkspace from "./features/problems/pages/ProblemWorkspace";
 import ProblemFormStepper from "./features/problems/pages/ProblemFormStepper";
@@ -18,6 +19,9 @@ const ProtectedRoute = ({ children }) => {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+  if (!user.isVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
   return children;
 };
 
@@ -26,6 +30,9 @@ const AdminRoute = ({ children }) => {
   const user = useAuthStore((state) => state.user);
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  if (!user.isVerified) {
+    return <Navigate to="/verify-email" replace />;
   }
   if (user.role !== "admin") {
     return <Navigate to="/problems" replace />;
@@ -40,6 +47,7 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* App Workspace Pages inside AppShell Layout */}
       <Route
